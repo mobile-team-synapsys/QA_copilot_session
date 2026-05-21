@@ -988,6 +988,140 @@
 
 ---
 
+## 11. Load Testing Test Cases
+
+### TC-073: Homepage load under normal concurrent users
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-073 |
+| **Title** | Verify homepage handles expected concurrent user load |
+| **Description** | Verify that the homepage remains responsive and returns within acceptable thresholds when subjected to the expected number of concurrent users. |
+| **Requirement ID** | BR-027 |
+| **Type** | Load Testing |
+| **Preconditions** | Application is deployed in a production-like environment. A load testing tool (e.g., k6, JMeter, Locust) is configured. |
+| **Test Steps** | 1. Configure a load test with 500 virtual users (VUs) ramping up over 2 minutes, then holding steady for 5 minutes.<br>2. Each VU navigates to the homepage (GET /).<br>3. Collect response times, error rate, and server resource metrics throughout the test. |
+| **Expected Results** | Average response time ≤ 1.5 seconds. 95th percentile (P95) response time ≤ 3 seconds. Error rate < 0.5%. Server CPU usage stays below 80%. No memory leaks or process crashes observed. |
+
+### TC-074: Product listing page under concurrent browsing load
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-074 |
+| **Title** | Verify product listing page handles concurrent browse traffic |
+| **Description** | Verify that the product listing/category page remains stable and within performance thresholds when many users browse simultaneously. |
+| **Requirement ID** | BR-004, BR-005, BR-027 |
+| **Type** | Load Testing |
+| **Preconditions** | At least 100 products exist in the database. Load testing tool is configured. |
+| **Test Steps** | 1. Simulate 300 concurrent VUs all requesting the same product category listing page with pagination (page 1, 2, 3).<br>2. Run for 10 minutes at steady load.<br>3. Monitor response times, DB query times, and error rates. |
+| **Expected Results** | Average response time ≤ 2 seconds. P95 ≤ 4 seconds. Error rate < 1%. Pagination returns correct and consistent data under load. No duplicate or missing products in listings. |
+
+### TC-075: Add-to-cart endpoint under high concurrent load
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-075 |
+| **Title** | Verify add-to-cart operation is stable under concurrent requests |
+| **Description** | Verify that the add-to-cart API endpoint handles concurrent requests from many users without data corruption, race conditions, or errors. |
+| **Requirement ID** | BR-007, BR-008 |
+| **Type** | Load Testing |
+| **Preconditions** | Products with sufficient stock (>1000 units) exist. 200 virtual user sessions with valid auth tokens are prepared. |
+| **Test Steps** | 1. Configure 200 concurrent VUs each repeatedly calling POST /cart/add with a valid product and quantity.<br>2. Run for 5 minutes at constant load.<br>3. After the test, verify the total quantity added matches the sum of individual requests (no lost writes). |
+| **Expected Results** | Average response time ≤ 1 second. P95 ≤ 2 seconds. Error rate < 0.5%. No cart items lost or duplicated due to race conditions. Inventory decrements correctly for all successful additions. |
+
+### TC-076: Checkout process under peak load
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-076 |
+| **Title** | Verify the full checkout flow handles peak concurrent orders |
+| **Description** | Verify that the end-to-end checkout process (address → payment → order creation) performs within acceptable limits under peak simultaneous usage. |
+| **Requirement ID** | BR-011, BR-012, BR-013 |
+| **Type** | Load Testing |
+| **Preconditions** | 150 virtual user sessions with pre-filled carts and saved addresses are ready. Payment gateway is using a sandbox that can handle load. |
+| **Test Steps** | 1. Configure 150 concurrent VUs each completing a full checkout: submit shipping address → select shipping method → submit payment → receive order confirmation.<br>2. Ramp up over 1 minute, hold for 5 minutes, ramp down over 1 minute.<br>3. Verify all successful VU transactions produce a valid order record in the database. |
+| **Expected Results** | Average checkout completion time ≤ 5 seconds end-to-end. P95 ≤ 8 seconds. Error rate < 1%. Every successful HTTP 200 response corresponds to an order record in the database. No duplicate orders are created. |
+
+### TC-077: Product search under concurrent search requests
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-077 |
+| **Title** | Verify search functionality is performant under concurrent query load |
+| **Description** | Verify that the product search endpoint returns results quickly and accurately when many users search simultaneously with various keywords. |
+| **Requirement ID** | BR-005 |
+| **Type** | Load Testing |
+| **Preconditions** | Product catalog with ≥ 500 products is populated. A list of 50 diverse search keywords is prepared. |
+| **Test Steps** | 1. Configure 400 concurrent VUs each sending GET /search?q={keyword} requests using a random keyword from the prepared list.<br>2. Run for 8 minutes at steady load.<br>3. Record response times, result accuracy, and error rates. |
+| **Expected Results** | Average response time ≤ 1.5 seconds. P95 ≤ 3 seconds. Error rate < 0.5%. Search results remain correct and consistent (same query returns the same set of products) under load. No search index corruption. |
+
+### TC-078: Spike test – sudden traffic surge on product launch
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-078 |
+| **Title** | Verify system survives a sudden spike in traffic simulating a flash sale |
+| **Description** | Verify that the application gracefully handles a rapid, sharp increase in concurrent users (spike) — simulating a flash sale or product launch announcement — and recovers to normal once the spike subsides. |
+| **Requirement ID** | BR-027 |
+| **Type** | Load Testing – Spike |
+| **Preconditions** | Application is in a production-like environment. Autoscaling (if applicable) is enabled. |
+| **Test Steps** | 1. Baseline: run 50 VUs for 2 minutes (normal load).<br>2. Spike: ramp to 1000 VUs within 30 seconds and hold for 2 minutes.<br>3. Recovery: ramp back down to 50 VUs within 30 seconds and hold for 2 minutes.<br>4. Monitor error rate, response times, and infrastructure metrics throughout all phases. |
+| **Expected Results** | During spike: error rate < 5% (graceful degradation is acceptable). P95 response time ≤ 10 seconds during the spike peak. No application crashes or total outages. During recovery: error rate returns to < 0.5% and P95 ≤ 3 seconds within 1 minute of load returning to baseline. No data corruption or lost orders. |
+
+### TC-079: Soak / endurance test – sustained load over extended period
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-079 |
+| **Title** | Verify system stability under sustained load over an extended duration |
+| **Description** | Verify that the application does not degrade, leak memory, or exhaust resources when subjected to a moderate constant load over several hours (endurance / soak test). |
+| **Requirement ID** | BR-027 |
+| **Type** | Load Testing – Soak |
+| **Preconditions** | Application is deployed. APM / monitoring tooling is active (e.g., Datadog, New Relic, Prometheus). |
+| **Test Steps** | 1. Configure 200 concurrent VUs performing a mixed scenario: 40% browsing, 30% searching, 20% add-to-cart, 10% checkout.<br>2. Run the test continuously for 4 hours.<br>3. Sample memory, CPU, response times, DB connection pool usage, and error rates every 5 minutes throughout. |
+| **Expected Results** | Response times remain consistent throughout (no gradual P95 increase > 20% from baseline). Error rate stays < 1% for the full duration. Memory usage does not grow unboundedly (no memory leak). DB connection pool is not exhausted. No process restarts or OOM kills. |
+
+### TC-080: Payment gateway integration throughput under concurrent payments
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-080 |
+| **Title** | Verify payment processing handles concurrent payment requests |
+| **Description** | Verify that the payment integration layer correctly queues, processes, and responds to a high number of simultaneous payment requests without errors, timeouts, or double-charges. |
+| **Requirement ID** | BR-012, BR-029 |
+| **Type** | Load Testing |
+| **Preconditions** | Payment gateway sandbox is configured and able to handle load. 100 test payment tokens are pre-generated. |
+| **Test Steps** | 1. Configure 100 concurrent VUs each submitting a payment request simultaneously using test card tokens.<br>2. Each VU submits exactly one payment; record the transaction ID returned.<br>3. After the test, query the payment gateway sandbox and the order database to cross-reference all transactions. |
+| **Expected Results** | All successful HTTP 200 responses are reflected as exactly one charge in the payment sandbox (no double-charges). P95 payment response time ≤ 5 seconds. Error rate < 2% (accounting for expected sandbox limits). No orders created without a corresponding payment record. |
+
+### TC-081: Static asset delivery performance under high load
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-081 |
+| **Title** | Verify CDN/static asset delivery remains fast under concurrent requests |
+| **Description** | Verify that product images, CSS, JavaScript bundles, and other static assets are delivered within acceptable response times when a large number of users load pages simultaneously. |
+| **Requirement ID** | BR-006, BR-027 |
+| **Type** | Load Testing |
+| **Preconditions** | A CDN or static asset server is configured. At least 50 distinct static assets (images, JS, CSS) are available. |
+| **Test Steps** | 1. Configure 600 concurrent VUs each requesting a random set of 10 static assets (images, JS, CSS files).<br>2. Run for 5 minutes at steady load.<br>3. Record response times for each asset type and the overall cache hit rate. |
+| **Expected Results** | Average response time for static assets ≤ 200 ms. P95 ≤ 500 ms. Cache hit rate ≥ 90% for warmed cache. Error rate < 0.1%. No broken images or missing assets during load. |
+
+### TC-082: Database connection pool exhaustion test
+
+| Field | Details |
+|-------|---------|
+| **Test Case ID** | TC-082 |
+| **Title** | Verify the application handles database connection pool exhaustion gracefully |
+| **Description** | Verify that when the database connection pool approaches or reaches its maximum capacity, the application returns graceful error responses rather than crashing, and recovers when load reduces. |
+| **Requirement ID** | BR-027 |
+| **Type** | Load Testing – Stress |
+| **Preconditions** | Database connection pool size is known and documented (e.g., max 50 connections). Monitoring is in place to observe live connection counts. |
+| **Test Steps** | 1. Configure a load test that gradually increases VUs performing database-heavy operations (e.g., product search + cart operations) until the connection pool is expected to be saturated (e.g., ramp to 500+ VUs over 3 minutes).<br>2. Observe application responses as the pool limit is approached and exceeded.<br>3. Reduce load back to 50 VUs and observe recovery. |
+| **Expected Results** | As pool saturation is reached, the application returns 503 Service Unavailable or queues requests gracefully rather than throwing unhandled exceptions. Error messages do not expose internal stack traces or database credentials. After load reduces, the application automatically recovers and resumes normal operation within 30 seconds. Persistent DB connections are properly released. |
+
+---
+
 ## Traceability Matrix
 
 | Test Case ID | Requirement ID | Category |
@@ -1064,3 +1198,13 @@
 | TC-070 | BR-003, BR-028 | Security |
 | TC-071 | BR-028 | Security |
 | TC-072 | BR-011, BR-028 | Security |
+| TC-073 | BR-027 | Load Testing |
+| TC-074 | BR-004, BR-005, BR-027 | Load Testing |
+| TC-075 | BR-007, BR-008 | Load Testing |
+| TC-076 | BR-011, BR-012, BR-013 | Load Testing |
+| TC-077 | BR-005 | Load Testing |
+| TC-078 | BR-027 | Load Testing |
+| TC-079 | BR-027 | Load Testing |
+| TC-080 | BR-012, BR-029 | Load Testing |
+| TC-081 | BR-006, BR-027 | Load Testing |
+| TC-082 | BR-027 | Load Testing |
