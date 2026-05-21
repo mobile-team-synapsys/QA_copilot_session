@@ -9,7 +9,7 @@ Selenium-based Java automation framework for E-Commerce platform testing using P
 - **Test Framework:** TestNG 7.10.2
 - **Build Tool:** Maven
 - **Design Pattern:** Page Object Model (POM)
-- **Browser Management:** WebDriverManager 5.9.2
+- **Browser Management:** WebDriverManager 6.1.0
 - **Logging:** Log4j2
 - **Reporting:** TestNG Reports + Extent Reports
 
